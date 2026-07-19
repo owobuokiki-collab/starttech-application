@@ -6,6 +6,7 @@ on:
     paths:
       - 'backend/**'
       - 'k8s/**'
+      - '.github/workflows/**'
 
 env:
   AWS_REGION: us-east-1
