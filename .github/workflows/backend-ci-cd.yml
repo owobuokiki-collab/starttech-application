@@ -27,7 +27,7 @@ jobs:
           docker build -t ${{ secrets.ECR_REPO_URI }}:${{ github.sha }} -f Server/Dockerfile ./Server
 
       - name: Vulnerability scan (Trivy)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@master
         with:
           image-ref: ${{ secrets.ECR_REPO_URI }}:${{ github.sha }}
           format: table
