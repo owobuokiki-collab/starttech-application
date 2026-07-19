@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-api
+  labels:
+    app: backend-api
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: backend-api
+  template:
+    metadata:
+      labels:
+        app: backend-api
+    spec:
+      containers:
+        - name: backend-api
+          image: 160172541521.dkr.ecr.us-east-1.amazonaws.com/starttech-backend-api:manual-test-2
+          ports:
+            - containerPort: 8080
+          env:
+            - name: PORT
+              value: "8080"
+            - name: MONGO_URI
+              valueFrom:
+                secretKeyRef:
+                  name: backend-secrets
+                  key: mongo-uri
+            - name: DB_NAME
+              value: "muchtodo"
+            - name: JWT_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: backend-secrets
+                  key: jwt-secret-key
+            - name: JWT_EXPIRATION_HOURS
+              value: "72"
+            - name: ENABLE_CACHE
+              value: "true"
+            - name: REDIS_ADDR
+              value: "starttech-redis.by4nvz.0001.use1.cache.amazonaws.com:6379"
+            - name: REDIS_HOST
+              value: "starttech-redis.by4nvz.0001.use1.cache.amazonaws.com"
+            - name: LOG_LEVEL
+              value: "INFO"
+            - name: LOG_FORMAT
+              value: "json"
+            - name: ALLOWED_ORIGINS
+              value: "https://dp4ifcs8gjjyu.cloudfront.net"
+            - name: SECURE_COOKIE
+              value: "true"
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10

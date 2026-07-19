@@ -1,0 +1,27 @@
+# NOTE: This cluster does not run the AWS Load Balancer Controller.
+# Backend traffic is routed via a Terraform-managed ALB targeting the
+# NodePort service directly (see k8s/service.yaml, nodePort: 30080, and
+# the ALB defined in starttech-infra/terraform/modules/eks/main.tf).
+# This Ingress resource is included for structural completeness and
+# documents the alternative (ALB Ingress Controller) approach; it has
+# no active effect since no ALB controller is installed to reconcile it.
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: backend-api-ingress
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: instance
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /api/v1
+            pathType: Prefix
+            backend:
+              service:
+                name: backend-api
+                port:
+                  number: 8080
