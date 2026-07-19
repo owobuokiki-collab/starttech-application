@@ -2,73 +2,54 @@ name: Backend CI/CD
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
     paths:
-      - 'backend/**'
+      - 'Server/**'
       - 'k8s/**'
-      - '.github/workflows/**'
-
-env:
-  AWS_REGION: us-east-1
-  ECR_REPOSITORY: starttech-backend-api
-  EKS_CLUSTER_NAME: starttech-cluster
 
 jobs:
-  build-and-deploy:
-    name: Test, build, scan, push, deploy
+  deploy-backend:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Go
+      - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.25.1'
+          go-version: '1.21'
 
-      - name: Run Go tests
-        working-directory: backend
+      - name: Run tests
         run: go test ./...
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Login to Amazon ECR
-        id: ecr-login
-        uses: aws-actions/amazon-ecr-login@v2
+        working-directory: ./Server
 
       - name: Build Docker image
-        working-directory: backend
         run: |
-          docker build -t ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }} .
+          docker build -t ${{ secrets.ECR_REPO_URI }}:${{ github.sha }} -f Server/Dockerfile ./Server
 
-      - name: Scan image for vulnerabilities (Trivy)
-        uses: aquasecurity/trivy-action@master
+      - name: Vulnerability scan (Trivy)
+        uses: aquasecurity/trivy-action@0.28.0
         with:
-          image-ref: ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+          image-ref: ${{ secrets.ECR_REPO_URI }}:${{ github.sha }}
           format: table
           exit-code: 0
-          severity: CRITICAL,HIGH
+
+      - name: Authenticate to AWS ECR
+        uses: aws-actions/amazon-ecr-login@v2
 
       - name: Push image to ECR
         run: |
-          docker push ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+          docker push ${{ secrets.ECR_REPO_URI }}:${{ github.sha }}
 
-      - name: Update deployment manifest with new image tag
+      - name: Update Kubernetes deployment with new image tag
         run: |
-          sed -i "s|image: .*|image: ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}|" k8s/deployment.yaml
+          sed -i "s|image: .*|image: ${{ secrets.ECR_REPO_URI }}:${{ github.sha }}|g" k8s/deployment.yaml
 
-      - name: Update kubeconfig
-        run: aws eks update-kubeconfig --name ${{ env.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
+      - name: Configure kubectl
+        run: |
+          aws eks update-kubeconfig --region ${{ secrets.AWS_REGION }} --name starttech-cluster
 
-      - name: Deploy to EKS
+      - name: Apply Kubernetes manifests
         run: kubectl apply -f k8s/
 
-      - name: Verify rollout
-        run: kubectl rollout status deployment/backend-api
-
+      - name: Rollout verification
+        run: kubectl rollout status deployment/backend-api -n default
