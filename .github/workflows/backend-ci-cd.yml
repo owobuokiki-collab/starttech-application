@@ -9,12 +9,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version: "1.21"
 
       - name: Run tests
         working-directory: ./backend
@@ -31,14 +32,21 @@ jobs:
           format: table
           exit-code: 0
 
-      - name: Authenticate to AWS ECR
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Push image to ECR
         run: |
           docker push ${{ secrets.ECR_REPO_URI }}:${{ github.sha }}
 
-      - name: Update Kubernetes deployment with new image tag
+      - name: Update Kubernetes deployment
         run: |
           sed -i "s|image: .*|image: ${{ secrets.ECR_REPO_URI }}:${{ github.sha }}|g" k8s/deployment.yaml
 
@@ -47,7 +55,9 @@ jobs:
           aws eks update-kubeconfig --region ${{ secrets.AWS_REGION }} --name starttech-cluster
 
       - name: Apply Kubernetes manifests
-        run: kubectl apply -f k8s/
+        run: |
+          kubectl apply -f k8s/
 
-      - name: Rollout verification
-        run: kubectl rollout status deployment/backend-api -n default
+      - name: Verify rollout
+        run: |
+          kubectl rollout status deployment/backend-api -n default
