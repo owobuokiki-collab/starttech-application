@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
         - name: backend-api
-          image: 160172541521.dkr.ecr.us-east-1.amazonaws.com/starttech-backend-api:manual-test-2
+          image: 160172541521.dkr.ecr.us-east-1.amazonaws.com/starttech-backend-api:manual-test-3
           ports:
             - containerPort: 8080
           env:
@@ -52,7 +52,7 @@ spec:
             - name: LOG_FORMAT
               value: "json"
             - name: ALLOWED_ORIGINS
-              value: "https://dp4ifcs8gjjyu.cloudfront.net"
+              value: "https://d2rzhp93tqbrqd.cloudfront.net"
             - name: SECURE_COOKIE
               value: "true"
           resources:

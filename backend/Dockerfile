@@ -8,7 +8,7 @@ RUN go mod download
 
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux go build -o /app/bin/api ./cmd/api
+RUN CGO_ENABLED=0 GOOS=linux GOFLAGS="-p=1" go build -o /app/bin/api ./cmd/api
 
 # ---------- Runtime stage ----------
 FROM alpine:3.20
