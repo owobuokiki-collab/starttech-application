@@ -4,6 +4,7 @@ on:
   push:
     branches: [ main ]
     paths:
+     - 'backend/**'
       - 'Server/**'
       - 'k8s/**'
 
@@ -19,12 +20,12 @@ jobs:
           go-version: '1.21'
 
       - name: Run tests
-        run: go test ./...
-        working-directory: ./Server
+           working-directory: ./backend
+          run: go test ./...
 
       - name: Build Docker image
-        run: |
-          docker build -t ${{ secrets.ECR_REPO_URI }}:${{ github.sha }} -f Server/Dockerfile ./Server
+       run: |
+       docker build -t ${{ secrets.ECR_REPO_URI }}:${{ github.sha }} -f backend/Dockerfile ./backend
 
       - name: Vulnerability scan (Trivy)
         uses: aquasecurity/trivy-action@master
